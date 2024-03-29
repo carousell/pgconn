@@ -16,9 +16,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackc/pgconn/internal/ctxwatch"
 	"github.com/jackc/pgio"
 	"github.com/jackc/pgproto3/v2"
+
+	"github.com/jackc/pgconn/internal/ctxwatch"
 )
 
 const (
@@ -1585,20 +1586,26 @@ func (rr *ResultReader) Read() *Result {
 
 // NextRow advances the ResultReader to the next row and returns true if a row is available.
 func (rr *ResultReader) NextRow() bool {
+	next, _ := rr.NextRowE()
+	return next
+}
+
+// NextRowE advances the ResultReader to the next row and returns true if a row is available and return error
+func (rr *ResultReader) NextRowE() (bool, error) {
 	for !rr.commandConcluded {
 		msg, err := rr.receiveMessage()
 		if err != nil {
-			return false
+			return false, err
 		}
 
 		switch msg := msg.(type) {
 		case *pgproto3.DataRow:
 			rr.rowValues = msg.Values
-			return true
+			return true, nil
 		}
 	}
 
-	return false
+	return false, nil
 }
 
 // FieldDescriptions returns the field descriptions for the current result set. The returned slice is only valid until
